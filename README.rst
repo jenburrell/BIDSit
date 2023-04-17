@@ -9,7 +9,7 @@ Install ``BIDSit`` and its core dependencies via pip::
 
     pip install BIDSit
 
-Install ``BIDSit`` by cloning GitHub, then move to where the toolbox is
+Or install ``BIDSit`` by cloning GitHub, then move to where the toolbox is
 housed in terminal ::
 
 	cd path/to/BIDSit
