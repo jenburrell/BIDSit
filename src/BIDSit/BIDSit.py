@@ -26,10 +26,6 @@ import errno
 
 
 def main():
-    modulenames = set(sys.modules) & set(globals())
-    allmodules = [sys.modules[name] for name in modulenames]
-    print(allmodules)
-    exit()
     # - get user input - #
     user_info = start_gui()
 #    print(user_info)
