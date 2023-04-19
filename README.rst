@@ -23,7 +23,5 @@ Dependencies
 ------------
 All of the core dependencies of ``BIDSit`` will be installed by ``pip``.
 
-To install ``BIDSit``, along with all the tools you need to develop
-and run tests run the following in your virtualenv ::
-
-	pip install -e .[dev] 
+BIDSit requires ``dcm2niiX`` to convert the DICOM and PAR/REC files to NIfTI files. ``dcm2niiX`` can be downloaded from as part of MRIcroGL’s graphical interface from ::
+    <https://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#Download>

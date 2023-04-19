@@ -71,6 +71,9 @@ setup(
 # tar tzf dist/BIDSit-0.0.1.tar.gz # should show lots of files see pic
 
 ### --- TO PUBLISH --- ###
-# python setup.py bdist_wheel sdist
-# python install twine
-# python upload dist/*
+# python3 setup.py bdist_wheel sdist
+# pip install twine
+# twine upload dist/*
+
+### --- TO UPDATE --- ###
+#twine upload --skip-existing dist/*
