@@ -35,6 +35,10 @@ def main():
     out_dir = user_info['out_dir'] # out_dir is where the output files will go
     WDIR = in_dir # WDIR is wherever we are working at the time
     user_info['WDIR'] = WDIR
+        
+    if user_info['bids_it']:
+        bids_info = BIDSit_gui(user_info)
+        user_info = {**user_info, **bids_info}
     
     ### --- convert files to NIFTIs --- ###
     if user_info['dcm2niix']:
@@ -63,10 +67,7 @@ def main():
         copy_it(WDIR, out_dir + "/sourcedata")
     
     ### --- BIDSit --- ###
-    print(user_info)
     if user_info['bids_it']:
-        bids_info = BIDSit_gui(user_info)
-        user_info = {**user_info, **bids_info}
         sub_list = listdir(WDIR)
         for entry in sub_list:
             if user_info['ses'] =='Yes':
