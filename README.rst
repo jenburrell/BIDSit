@@ -23,5 +23,6 @@ Dependencies
 ------------
 All of the core dependencies of ``BIDSit`` will be installed by ``pip``.
 
-BIDSit requires ``dcm2niiX`` to convert the DICOM and PAR/REC files to NIfTI files. ``dcm2niiX`` can be downloaded from as part of MRIcroGL’s graphical interface from ::
-    <https://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#Download>
+BIDSit requires ``dcm2niiX`` to convert the DICOM and PAR/REC files to NIfTI files.``dcm2niiX`` can be downloaded from as part of MRIcroGL’s graphical interface from ::
+
+    https://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#Download
