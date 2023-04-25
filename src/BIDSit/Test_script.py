@@ -3,20 +3,13 @@ from BIDSit import *
 path = "/Users/labmanager/Resilience/BIDSit/info"
 import PySimpleGUI as sg
 import re
+import os
+
+import shutil
 #user_info = {'WDIR': '/Users/labmanager/Resilience/temp_data','in_dir': '/Users/labmanager/Resilience/raw', 'dcm2niix': True, 'func_task_num': '1', 'func_scan_num': '2', 'func': {'input_Task-1': 'RS', 'menu_1': 'bold', '0': True, '1': True, 'input_acq Input 1': '', 'list_acq Input 1': [], 'input_ce Input 1': '', 'list_ce Input 1': [], 'input_desc Input 1': '', 'list_desc Input 1': [], 'input_dir Input 1': '', 'list_dir Input 1': [], 'input_echo Input 1': '', 'list_echo Input 1': [], 'input_rec Input 1': '', 'list_rec Input 1': []}, 'anat_task_num': '3', 'anat_scan_num': '3', 'anat': {'menu_1': 'FLAIR', 'menu_2': 'T1w', 'menu_3': 'T2w', '0': True, '1': False, '2': False, '3': False, '4': True, '5': False, '6': False, '7': False, '8': True, 'input_acq Input 1': '', 'list_acq Input 1': [], 'input_acq Input 2': '', 'list_acq Input 2': [], 'input_acq Input 3': '', 'list_acq Input 3': [], 'input_ce Input 1': '', 'list_ce Input 1': [], 'input_ce Input 2': '', 'list_ce Input 2': [], 'input_ce Input 3': '', 'list_ce Input 3': [], 'input_desc Input 1': '', 'list_desc Input 1': [], 'input_desc Input 2': '', 'list_desc Input 2': [], 'input_desc Input 3': '', 'list_desc Input 3': [], 'input_dir Input 1': '', 'list_dir Input 1': [], 'input_dir Input 2': '', 'list_dir Input 2': [], 'input_dir Input 3': '', 'list_dir Input 3': [], 'input_rec Input 1': '', 'list_rec Input 1': [], 'input_rec Input 2': '', 'list_rec Input 2': [], 'input_rec Input 3': '', 'list_rec Input 3': []}, 'fmap_task_num': '2', 'fmap_scan_num': '2', 'fmap': {'menu_1': 'epi (rev-b0)', '-list_1-': ['func task 1'], 'menu_2': 'epi (PA)', '-list_2-': ['func task 1'], '0': True, '1': False, '2': False, '3': True, 'input_acq Input 1': '', 'list_acq Input 1': [], 'input_acq Input 2': '', 'list_acq Input 2': [], 'input_desc Input 1': '', 'list_desc Input 1': [], 'input_desc Input 2': '', 'list_desc Input 2': [], 'rev-b0': 'AP'}, 'exp_name': 'Resilience', 'ses': 'Yes'}
 #variables = {'func': {'ents': {'acq':{'names':[],'scans':[]}, 'ce':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}, 'echo':{'names':[],'scans':[]}}, 'key_words': ['TR', 'fmri','fMRI','FMRI', 'task','TASK', 'MB']}, 'anat': {'ents': {'acq':{'names':[],'scans':[]}, 'ce':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}}, 'key_words': ['T1','t1','T2','t2','FLAIR','flair','PD','pd','UNIT1','unit1','angio']}, 'dwi': {'ents': {'acq':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}}, 'key_words': ['dwi','DWI', 'dti','DTI', 'hardi','HARDI', 'sbref']}, 'fmap': {'ents': {'acq':{'names':[],'scans':[]}}, 'key_words': ['rev','REV', 'epi','EPI', 'fieldmap', 'mag','MAG', 'PH', 'ph']}, 'perf': {'ents': {'acq':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}}, 'key_words': ['CASL', 'pCASL', 'FAIR', 'EPISTAR', 'PICORE', 'm0scan', 'phase1', 'phase2']}} # ADD DESC
-indir = '/Users/labmanager/Resilience/raw'
-ses = True
-BIDSit = False
-in_dir = '/Users/labmanager/Resilience/parrec/RESILIENCE_02/T2/'
+
 WDIR = '/Users/labmanager/Resilience'
-WDIR = WDIR + '/tempdata'
-if ses:
-    WDIR = WDIR + '/' + in_dir.split('/')[-3] + '/' + in_dir.split('/')[-2]
-else:
-    WDIR = WDIR + '/' + in_dir.split('/')[-2]
-print(WDIR)
-print(ses)
 exit()
 
 

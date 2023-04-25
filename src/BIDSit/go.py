@@ -18,6 +18,7 @@ import PySimpleGUI as sg
 from datetime import datetime
 from multiprocessing import Pool
 from itertools import repeat
+from natsort import natsorted
 import filecmp
 import glob
 import shutil
@@ -64,7 +65,16 @@ def main():
         
     ### --- sourcedata folder --- ###
     if user_info['copy'] == "Yes":
-        copy_it(WDIR, out_dir + "/sourcedata")
+        if dir_exists(out_dir + "/sourcedata"):
+            dir = listdir(WDIR)
+            der_fld = listdir(out_dir + "/sourcedata")
+            for sub in dir:
+                if sub in der_fld:
+                    continue
+                else:
+                    copy_it(WDIR+'/'+sub, out_dir + "/sourcedata/"+sub)
+        else:
+            copy_it(WDIR, out_dir + "/sourcedata")
     
     ### --- BIDSit --- ###
     if user_info['bids_it']:
@@ -84,14 +94,16 @@ def main():
                     sub_list.remove(entry)
         # - multiprocessing - #
         pool = Pool() # Create a multiprocessing Pool
-        pool.starmap(BIDSit, zip(sub_list, repeat(user_info))) # process gets masks
+        pool.starmap(BIDSit, zip(sub_list, repeat(user_info))) # BIDSit for each participant or time point
         # - Close the pool, keep the kids safe - #
         pool.close()
         pool.join()
         
+                     
+        
         ### --- make all the other files --- ###
-        if 'tempdata' in WDIR:
-            WDIR = WDIR.rsplit('/',1)[0]
+        if out_dir  != WDIR:
+            WDIR = out_dir
         dir = listdir(WDIR)
         for fld in dir:
             if 'tempdata' in fld:
@@ -101,7 +113,16 @@ def main():
         der_dir = f"{WDIR}/derivatives"
         def ignore_files(dir, files):
             return [f for f in files if os.path.isfile(os.path.join(dir, f))]
-        shutil.copytree(WDIR+'/rawdata', der_dir, ignore=ignore_files)
+        if dir_exists(der_dir):
+            dir = listdir(WDIR+'/rawdata')
+            der_fld = listdir(der_dir)
+            for sub in dir:
+                if sub in der_fld:
+                    continue
+                else:
+                    shutil.copytree(WDIR+'/rawdata/'+sub, der_dir+'/'+sub, ignore=ignore_files)
+        else:
+            shutil.copytree(WDIR+'/rawdata', der_dir, ignore=ignore_files)
         
         # - dataset_description.json file - #
         if not os.path.exists(os.path.join(WDIR, "dataset_description.json")):
@@ -155,7 +176,6 @@ def main():
         else:
             print('participants.json file already exists.')
     else: # when not doing BIDSit, rename tempdata to sourcedata and delete tempdata
-        copy_it(WDIR, out_dir + "/sourcedata")
         WDIR = WDIR.rsplit('/',1)[0]
         dir = listdir(WDIR)
         for fld in dir:
@@ -334,8 +354,9 @@ def BIDSit_gui(user_info):
             exit("User exited BIDSit")
         elif event == 'Load':
             load_info = load_gui()
-            info = {**info, **load_info}
-            window.close()
+            if load_info:
+                info = {**info, **load_info}
+                window.close()
         elif event == '-func_butt-':
             info['func_task_num'] = values['func_task_num']
             info['func_scan_num'] = values['func_scan_num']
@@ -765,7 +786,7 @@ def BIDSit(sub, user_info):
         for i, (key, val) in enumerate(scans.items()):
             for value in val:
                 if 'echo' in value:
-                    endings.append('_'+value)
+                    endings.append(value)
                     val.remove(value)
             if len(endings)-1 != i:
                 endings.append('')
@@ -779,7 +800,7 @@ def BIDSit(sub, user_info):
             file = ''
             for ext in exts:
                 files.append(glob.glob(f"{in_dir}/{og_sub}/*{ext}*.nii*"))
-            files = sorted([item for sub_list in files for item in sub_list])
+            files = natsorted([item for sub_list in files for item in sub_list])
             if not files:
                 print(f"No {file_type} files were found in {in_dir}/{og_sub}")
                 break
@@ -821,7 +842,8 @@ def BIDSit(sub, user_info):
             f_type = menu[task_cat] # type of file
             endings[i] = endings[i] + '_' + f_type # adds file type to ending
             fill_it = '_'+'_'.join(scans[f"Scan {i+1}"])
-            
+            if fill_it == '_':
+                fill_it = ''
             # - counting - #
             occur = tasksLookedAt.count(task_cat) # counts occurance of task
             run_num = occur + 1 # run number based on how many times that task occured
@@ -853,9 +875,6 @@ def BIDSit(sub, user_info):
                     new = f"{WDIR}/rawdata/{f_sub}/{file_type}/{sub}{fill_it}{endings[i]}{ext}" # new name for file
                     os.rename(file, new) # rename file
                     if ext == '.json':
-#                        if file_type == 'fmap':
-#                            json_edit(new, file_type, map_dict, int_dict)
-#                        else:
                         json_edit(new, file_type, map_dict)
         if dir_exists(f"{WDIR}/rawdata/{f_sub}/{file_type}"):
             with open(f"{WDIR}/rawdata/{f_sub}/{file_type}/change_log.json", 'w') as file:
