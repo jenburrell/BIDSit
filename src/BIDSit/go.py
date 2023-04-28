@@ -92,17 +92,17 @@ def main():
                     continue
                 else:
                     sub_list.remove(entry)
+        for sub in sub_list:
+            BIDSit(sub, user_info)
         # - multiprocessing - #
-        pool = Pool() # Create a multiprocessing Pool
-        pool.starmap(BIDSit, zip(sub_list, repeat(user_info))) # BIDSit for each participant or time point
-        # - Close the pool, keep the kids safe - #
-        pool.close()
-        pool.join()
-        
-                     
+#        pool = Pool() # Create a multiprocessing Pool
+#        pool.starmap(BIDSit, zip(sub_list, repeat(user_info))) # BIDSit for each participant or time point
+#        # - Close the pool, keep the kids safe - #
+#        pool.close()
+#        pool.join()
         
         ### --- make all the other files --- ###
-        if out_dir  != WDIR:
+        if out_dir != WDIR:
             WDIR = out_dir
         dir = listdir(WDIR)
         for fld in dir:
@@ -575,7 +575,10 @@ def fmap_butt(task_num, scan_num, user_info):
     scan_key = []
     type_list = []
     for key, value in user_info.items():
-        if "fmap_task_num" in key or "anat_task_num" in key:
+        if "func_scan_num" in key:
+            scan_list.append(int(value))
+            scan_key.append(key.split('_')[0])
+        if "fmap_task_num" in key or "anat_task_num" in key or "func_task_num" in key:
             continue
         elif "task_num" in key:
             scan_list.append(int(value))
@@ -583,7 +586,7 @@ def fmap_butt(task_num, scan_num, user_info):
     for i, type in enumerate(scan_key):
         if type == 'func':
             for i in range(scan_list[i]):
-                type_list.append(type + ' task ' + str(i+1))
+                type_list.append(type + ' scan ' + str(i+1))
         else:
             for i in range(scan_list[i]):
                 type_list.append(type + ' scan type ' + str(i+1))
@@ -677,17 +680,25 @@ def perf_butt(task_num, scan_num):
 def dcm2niix(in_dir, WDIR, ses=False):
     WDIR = WDIR + '/tempdata'
     if ses:
-        WDIR = WDIR + '/' + in_dir.split('/')[-3] + '/' + in_dir.split('/')[-2]
+        WDIR = WDIR + '/' + in_dir.split('/')[-2] + '/' + in_dir.split('/')[-1]
     else:
-        WDIR = WDIR + '/' + in_dir.split('/')[-2]
+        WDIR = WDIR + '/' + in_dir.split('/')[-1]
     mkdir(WDIR)
     subprocess.call(['dcm2niix', '-b', 'y', '-ba', 'y', '-z', 'y', '-f', '%x_%p_%t_%s', '-o', WDIR, in_dir]) # (%a=antenna (coil) name, %b=basename, %c=comments, %d=description, %e=echo number, %f=folder name, %i=ID of patient, %j=seriesInstanceUID, %k=studyInstanceUID, %m=manufacturer, %n=name of patient, %o=mediaObjectInstanceUID, %p=protocol, %r=instance number, %s=series number, %t=time, %u=acquisition number, %v=vendor, %x=study ID; %z=sequence name; default '%f_%p_%t_%s')
 
 ### --- organize NIFTIs into BIDS --- ###
-def BIDSit(sub, user_info):
+def BIDSit(sub, user_info, *types):
+    print(user_info)
     # - define variables in use - #
-    in_dir = user_info['WDIR'] # file input
     WDIR = user_info['out_dir'] # file output (where the work is done)
+    mkdir(WDIR, 'rawdata')
+    in_dir = user_info['WDIR'] # file input
+    in_dir_og = in_dir
+    if not 'tempdata' in in_dir:
+        new_indir = in_dir.rsplit('/', 1)[0] + "/tempdata"
+        if not dir_exists(new_indir):
+            shutil.copytree(in_dir, new_indir)
+        in_dir = new_indir
 
     og_sub = sub
     if user_info['ses'] =='Yes':
@@ -714,9 +725,12 @@ def BIDSit(sub, user_info):
                 process.append(key)
     
     ### --- organize in BIDS --- ###
-    variables = {'func': {'ents': {'acq':{'names':[],'scans':[]}, 'ce':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}, 'echo':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['TR', 'fmri','fMRI','FMRI', 'task'], 'exts': ['.json']}, 'anat': {'ents': {'acq':{'names':[],'scans':[]}, 'ce':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['T1','T2','FLAIR','PD','UNIT1','angio'], 'exts': ['.json']}, 'dwi': {'ents': {'acq':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['dwi', 'dti', 'hardi', 'sbref'], 'exts': ['.json', '.bvec', '.bval']}, 'fmap': {'ents': {'acq':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['rev', 'epi','EPI', 'fieldmap', 'mag', 'ph', 'MAG', 'PH'], 'exts': ['.json']}, 'perf': {'ents': {'acq':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['CASL', 'pCASL', 'FAIR', 'EPISTAR', 'PICORE', 'm0scan', 'phase1', 'phase2'], 'exts': ['.json', '.tsv']}}
+    variables = {'func': {'ents': {'acq':{'names':[],'scans':[]}, 'ce':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}, 'echo':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['TR', 'fmri','fMRI','FMRI', 'task'], 'exts': ['.json']}, 'anat': {'ents': {'acq':{'names':[],'scans':[]}, 'ce':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['T1','T2','FLAIR','PD','UNIT1','angio'], 'exts': ['.json']}, 'dwi': {'ents': {'acq':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['dwi', 'DWI', 'dti', 'DTI', 'hardi', 'HARDI', 'sbref', 'SBREF'], 'exts': ['.json', '.bvec', '.bval']}, 'fmap': {'ents': {'acq':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['rev', 'epi','EPI', 'fieldmap', 'mag', 'ph', 'MAG', 'PH'], 'exts': ['.json']}, 'perf': {'ents': {'acq':{'names':[],'scans':[]}, 'rec':{'names':[],'scans':[]}, 'dir':{'names':[],'scans':[]}, 'desc':{'names':[],'scans':[]}}, 'key_words': ['CASL', 'pCASL', 'FAIR', 'EPISTAR', 'PICORE', 'm0scan', 'phase1', 'phase2'], 'exts': ['.json', '.tsv']}}
     map_dict = {}
     for file_type in process:
+        if types:
+            file_type = types[0]
+            
         file_log = {"Scan type": file_type, 'changes':{}}
         task_num = int(user_info[f"{file_type}_task_num"])
         scan_num = int(user_info[f"{file_type}_scan_num"])
@@ -764,29 +778,32 @@ def BIDSit(sub, user_info):
         if not scans: #if no mapping is required
             for scan in range(1,scan_num+1):
                 scans[f"Scan {scan}"] = []
-        
+        scans['general'] = {'task_order': task_ord}
         # - get dir and ending for fmap files - #
         if file_type == 'fmap':
             for i, type in enumerate(task_ord):
                 if menu[type] == 'epi (rev-b0)':
                     if not 'dir' in scans[f"Scan {i+1}"]:
-                        scans[f"Scan {i+1}"].append(f"dir-{user_info['fmap']['rev-b0']}")
+                        scans[f"Scan {i+1}"].append(f"dir-{user_info['fmap']['rev-b0']['rev-dir']}")
                     for j, entry in enumerate(scans[f"Scan {i+1}"]):
                         if 'acq' in entry:
-                            scans[f"Scan {i+1}"][j] = entry+'-rev-b0'
+                            scans[f"Scan {i+1}"][j] = entry+'-revb0'
+                            acq = True
                             break
                         else:
-                            scans[f"Scan {i+1}"].append('acq-rev-b0')
+                            acq = False
+                    if not acq:
+                        scans[f"Scan {i+1}"].append('acq-revb0')
                 else:
                     scans[f"Scan {i+1}"].append('dir-'+menu[type].split('(')[-1].split(')')[0])
             menu = [menu[i].split(' ')[0] for i in range(task_num)]
-        
+                
         # - get endings for files - #
         endings = []
         for i, (key, val) in enumerate(scans.items()):
             for value in val:
                 if 'echo' in value:
-                    endings.append(value)
+                    endings.append('_' + value)
                     val.remove(value)
             if len(endings)-1 != i:
                 endings.append('')
@@ -794,12 +811,17 @@ def BIDSit(sub, user_info):
         # - Rename files - #
         exts = variables[file_type]['key_words']
         tasksLookedAt=[]
-        map_dict = {f"file_type": {'task_ord': task_ord, 'scans': scans}, 'WDIR': WDIR, 'f_sub':f_sub}
+        map_dict = {f"{file_type}": {'task_ord': task_ord, 'scans': scans}, 'WDIR': WDIR, 'f_sub': f_sub}
         for i in range(scan_num):
             files =[]
             file = ''
-            for ext in exts:
-                files.append(glob.glob(f"{in_dir}/{og_sub}/*{ext}*.nii*"))
+            if types:
+                i = types[1]
+                for ext in exts:
+                    files.append(glob.glob(f"{in_dir.split('tempdata')[0] + in_dir_og.rsplit('/',1)[1]}/{og_sub}/*{ext}*.nii*"))
+            else:
+                for ext in exts:
+                    files.append(glob.glob(f"{in_dir}/{og_sub}/*{ext}*.nii*"))
             files = natsorted([item for sub_list in files for item in sub_list])
             if not files:
                 print(f"No {file_type} files were found in {in_dir}/{og_sub}")
@@ -810,8 +832,9 @@ def BIDSit(sub, user_info):
                     continue
                 else:
                     file_list.append(f)
+                    
             if file_type != 'func':
-                if (scan_num - i) != len(file_list):
+                if (scan_num - i) != len([item for sublist in file_list for item in sublist]):
                     for end in user_info[file_type][f"menu_{i+1}"].split('w')[0].split('('):
                         end = end.split(')')[0]
                         end = end.split()[0]
@@ -833,9 +856,24 @@ def BIDSit(sub, user_info):
                 else:
                     file = file_list[0]
             else:
-                file = file_list[0]
+                if (scan_num - i) != len([item for sublist in file_list for item in sublist]):
+                    file_list_full = file_list
+                    file_list = []
+                    for file in file_list_full:
+                        if not 'EPI' in file:
+                            file_list.append(file)
+                if not file_list:
+                    file = ''
+                else:
+                    file = file_list[0]
+            
             if not file:
-                print(f"No files for {og_sub} matching", user_info[file_type][f"menu_{i+1}"])
+                if types:
+                    return
+                if file_type == 'func':
+                    print(f"No more func files for {og_sub}")
+                else:
+                    print(f"No files for {og_sub} matching", user_info[file_type][f"menu_{i+1}"])
                 continue
             mkdir(WDIR, f"rawdata/{f_sub}/{file_type}")
             task_cat = task_ord[i] # task number (-1)
@@ -851,62 +889,92 @@ def BIDSit(sub, user_info):
             # - naming - #
             if file_type == 'func':
                 task_name = ''.join(task_names[task_cat].split()) # task name
-                new = f"{WDIR}/rawdata/{f_sub}/{file_type}/{sub}_task_{task_name}{fill_it}_run_{run_num}{endings[i]}.nii.gz" # new name for file
+                new = f"{WDIR}/rawdata/{f_sub}/{file_type}/{sub}_task_{task_name}{fill_it}_run-{run_num}{endings[i]}.nii.gz" # new name for file
                 file_log['changes'][f"scan {i+1} old"] = file
                 file_log['changes'][f"scan {i+1} new"] = new
                 print("file:", file)
                 print("new:", new)
-                os.rename(file, new) # rename file
+                if types:
+                    shutil.copy(file, new)
+                else:
+                    os.rename(file, new) # rename file
                 json_file = file.replace('.nii.gz','.json') # get .json file assocated
-                json_new = f"{WDIR}/rawdata/{f_sub}/{file_type}/{sub}_task_{task_name}{fill_it}_run_{run_num}{endings[i]}.json" # new name for .json file
-                os.rename(json_file, json_new) # rename file
+                json_new = f"{WDIR}/rawdata/{f_sub}/{file_type}/{sub}_task_{task_name}{fill_it}_run-{run_num}{endings[i]}.json" # new name for .json file
+                if types:
+                    shutil.copy(json_file, json_new)
+                else:
+                    os.rename(json_file, json_new) # rename file
+                json_edit(json_new, file_type, f_sub, og_sub, user_info)
             else:
                 new = f"{WDIR}/rawdata/{f_sub}/{file_type}/{sub}{fill_it}{endings[i]}.nii.gz" # new name for file
                 file_log['changes'][f"scan {i+1} old"] = file
                 file_log['changes'][f"scan {i+1} new"] = new
                 print("file:", file)
                 print("new:", new)
-                os.rename(file, new) # rename file
+                if types:
+                    shutil.copy(file, new)
+                else:
+                    os.rename(file, new) # rename file
+                if file_type == 'fmap':
+                    add_dict = {user_info['fmap'][f"menu_{i+1}"]: user_info['fmap'][f"-list_{i+1}-"]}
+                else:
+                    add_dict = {}
                 for ext in variables[file_type]['exts']:
                     if 'nii.gz' in file:
                         file = file.rsplit('.',2)[0] + ext
                     else:
                         file = file.rsplit('.',1)[0] + ext
                     new = f"{WDIR}/rawdata/{f_sub}/{file_type}/{sub}{fill_it}{endings[i]}{ext}" # new name for file
-                    os.rename(file, new) # rename file
+                    if types:
+                        shutil.copy(file, new)
+                    else:
+                        os.rename(file, new) # rename file
                     if ext == '.json':
-                        json_edit(new, file_type, map_dict)
+                        json_edit(new, file_type, f_sub, og_sub, user_info, add_dict)
+            if types:
+                if dir_exists(f"{WDIR}/rawdata/{f_sub}/{file_type}"):
+                    if file_exists(f"{WDIR}/rawdata/{f_sub}/{file_type}/change_log.json"):
+                        with open(f"{WDIR}/rawdata/{f_sub}/{file_type}/change_log.json", 'r') as file:
+                            data_add = json.load(file)
+                            file_log['changes'] = {**data_add['changes'], **file_log['changes']}
+                    with open(f"{WDIR}/rawdata/{f_sub}/{file_type}/change_log.json", 'w') as file:
+                        json.dump(file_log, file, indent=4)
+                return new
         if dir_exists(f"{WDIR}/rawdata/{f_sub}/{file_type}"):
+            if file_exists(f"{WDIR}/rawdata/{f_sub}/{file_type}/change_log.json"):
+                with open(f"{WDIR}/rawdata/{f_sub}/{file_type}/change_log.json", 'r') as file:
+                    data_add = json.load(file)
+                    file_log['changes'] = {**data_add['changes'], **file_log['changes']}
             with open(f"{WDIR}/rawdata/{f_sub}/{file_type}/change_log.json", 'w') as file:
                 json.dump(file_log, file, indent=4)
-        
+                
 # - Edit json files - #
-def json_edit(json_f, file_type, m_dict, *dicts):
+def json_edit(json_f, file_type, f_sub, og_sub, info, *dicts):
+    sub_solo = f_sub.split('/')[0]
     dic = {}
     for dict in dicts:
         dic = {**dic, **dict}
-    with open(json_f) as file:
+    with open(json_f, 'r') as file:
         data = json.load(file)
-        for l_no, line in enumerate(file):
-            if 'WaterFatShift' in line:
-                WaterFatShift = float(re.sub(",", "", line.split()[1]))
-            elif 'ImagingFrequency' in line:
-                ImagingFrequency = float(re.sub(",", "", line.split()[1]))
-            elif 'ReconMatrixPE' in line:
-                ReconMatrixPE = int(re.sub(",", "", line.split()[1]))
-            elif 'EPI_Factor' in line:
-                EPI_Factor = int(re.sub(",", "", line.split()[1]))
-            elif 'EchoTrainLength' in line:
-                EchoTrainLength = int(re.sub(",", "", line.split()[1]))
-            elif 'EstimatedEffectiveEchoSpacing' in line:
-                EstimatedEffectiveEchoSpacing = int(re.sub(",", "", line.split()[1]))
-            elif 'EstimatedTotalReadoutTime' in line:
-                EstimatedTotalReadoutTime = int(re.sub(",", "", line.split()[1]))
+        for value in data.keys():
+            if 'WaterFatShift' in value:
+                WaterFatShift = data[value]
+            elif 'ImagingFrequency' in value:
+                ImagingFrequency = data[value]
+            elif 'ReconMatrixPE' in value:
+                ReconMatrixPE = data[value]
+            elif 'EchoTrainLength' in value:
+                EchoTrainLength = data[value]
+            elif 'EstimatedEffectiveEchoSpacing' in value:
+                EstimatedEffectiveEchoSpacing = data[value]
+            elif 'EstimatedTotalReadoutTime' in value:
+                EstimatedTotalReadoutTime = data[value]
+            elif 'PhaseEncodingDirection' == value:
+                PhaseEncodingDirection = data[value]
         try :
             WaterFatShift
             ImagingFrequency
             ReconMatrixPE
-            EPI_Factor
             EchoTrainLength
         except NameError:
             add_dict = {}
@@ -924,14 +992,18 @@ def json_edit(json_f, file_type, m_dict, *dicts):
             else:
                 add_dict = {'subject_id': sub_solo, 'EffectiveEchoSpacing': EstimatedEffectiveEchoSpacing, 'TotalReadoutTime': EstimatedTotalReadoutTime}
         data = {**data, **add_dict}
-        if 'dir-AP' in file:
-            data['PhaseEncodingDirection'] = "j-" # Anterior to Posterior Phase Encoding Direction
-        elif 'dir-PA' in file:
-             data['PhaseEncodingDirection'] = "j" # Posterior to Anterior Phase Encoding Direction
-        if 'dir-LR' in file:
-            data['PhaseEncodingDirection'] = "i-" # Anterior to Posterior Phase Encoding Direction
-        elif 'dir-RL' in file:
-             data['PhaseEncodingDirection'] = "i" # Posterior to Anterior Phase Encoding Direction
+        try:
+            PhaseEncodingDirection
+        except NameError:
+            data['PhaseEncodingDirection'] = "Unknown: j- (AP), j (PA), i- (LR), i (RL)"
+            if 'dir-AP' in json_f:
+                data['PhaseEncodingDirection'] = "j-" # Anterior to Posterior Phase Encoding Direction
+            elif 'dir-PA' in json_f:
+                 data['PhaseEncodingDirection'] = "j" # Posterior to Anterior Phase Encoding Direction
+            if 'dir-LR' in json_f:
+                data['PhaseEncodingDirection'] = "i-" # Left to Right Phase Encoding Direction
+            elif 'dir-RL' in json_f:
+                 data['PhaseEncodingDirection'] = "i" # Right to Left Phase Encoding Direction
         if file_type == 'fmap':
             if 'rev' in json_f: # rev has to happen before in order to catch correctly
                 for key in dic:
@@ -941,34 +1013,43 @@ def json_edit(json_f, file_type, m_dict, *dicts):
                         for item in f_list:
                             file_t = item.split()[0] # file type to look at
                             t_num = int(item.split()[-1])-1 # scan to look at
-                            if file_t in m_dict:
-                                task_ord = m_dict[file_t]['task_ord']
-                                scans = m_dict[file_t]['scans']
-                                idx = [i for i, x in enumerate(task_ord) if x == t_num]
-                                for i in idx:
-                                    search = '_*'.join(scans[f"Scan {i+1}"])
-                                    files.append(glob.glob(f"{m_dict['WDIR']}/rawdata/{m_dict['f_sub']}/{file_t}/*{search}*.nii.gz"))
+                            if file_t in info:
+                                print(f"running BIDSit for on {file_t} for {og_sub}")
+                                files.append(BIDSit(og_sub, info, file_t, t_num))
                         data['IntendedFor'] = files
+                        print(data['IntendedFor'])
+                        break
             else:
                 for key in dic:
-                    if key in json_f:
-                        f_list = dic[key] #AP
-                        files = []
-                        for item in f_list:
-                            file_t = item.split()[0] # file type to look at
-                            t_num = int(item.split()[-1])-1 # scan to look at
-                            if file_t in m_dict:
-                                task_ord = m_dict[file_t]['task_ord']
-                                scans = m_dict[file_t]['scans']
-                                idx = [i for i, x in enumerate(task_ord) if x == t_num]
-                                for i in idx:
-                                    search = '_*'.join(scans[f"Scan {i+1}"])
-                                    files.append(glob.glob(f"{m_dict['WDIR']}/rawdata/{m_dict['f_sub']}/{file_t}/*{search}*.nii.gz"))
-                        data['IntendedFor'] = files
-                        break
+                    f_list = dic[key] #AP
+                    files = []
+                    for item in f_list:
+                        file_t = item.split()[0] # file type to look at
+                        t_num = int(item.split()[-1])-1 # scan to look at
+                        if file_t in info:
+                            print(f"running BIDSit for on {file_t} for {og_sub}")
+                            files.append(BIDSit(og_sub, info, file_t, t_num))
+                    data['IntendedFor'] = files
+                    print(data['IntendedFor'])
+                    break
     with open(json_f, 'w') as file:
         json.dump(data, file, indent=4)
-
+    if 'IntendedFor' in data.keys():
+        for item in files:
+            item = item.split('.')[0] + ".json"
+            with open(item, 'r') as this:
+                datum = json.load(this)
+                if data['PhaseEncodingDirection'] == "j-":
+                    dict_add = {'PhaseEncodingDirection': "j"}
+                if data['PhaseEncodingDirection'] == "j":
+                    dict_add = {'PhaseEncodingDirection': "j-"}
+                if data['PhaseEncodingDirection'] == "i-":
+                    dict_add = {'PhaseEncodingDirection': "i"}
+                if data['PhaseEncodingDirection'] == "i":
+                    dict_add = {'PhaseEncodingDirection': "i-"}
+            datum = {**datum, **dict_add}
+            with open(item, 'w') as this:
+                json.dump(datum, this, indent=4)
 ### --- MISC Functions --- ###
 # - make a directory - #
 def mkdir(path,extension=''):
