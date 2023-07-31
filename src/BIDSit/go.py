@@ -25,7 +25,7 @@ import json
 import errno
 
 
-def main():
+def DOit():
     # - get user input - #
     sg.theme('GreenTan')
     user_info = start_gui()
@@ -1351,4 +1351,4 @@ def copy_it(src, dst):
         else: raise
     
 if __name__ == '__main__':
-    main()
+    DOit()

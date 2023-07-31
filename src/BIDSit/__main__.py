@@ -1,7 +1,7 @@
-from BIDSit import go
+from go import *
 
 def main():
-    info = go()
+    info = DOit()
 
 if __name__ == "__main__":
     main()
