@@ -60,5 +60,10 @@ setup(
             "pytest>=3.7",
         ],
     },
+    entry_points={
+        'console_scripts': [
+            'BIDSit = BIDSit:go',
+        ]
+    }
 )
 

@@ -1,4 +1,4 @@
-from go import *
+from BIDSit import *
 
 def main():
     info = DOit()
