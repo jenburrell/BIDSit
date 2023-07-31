@@ -1,7 +1,4 @@
-from BIDSit import *
-
-def main():
-    info = DOit()
+from . import DOit
 
 if __name__ == "__main__":
-    main()
+    DOit()
