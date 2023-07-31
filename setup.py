@@ -62,7 +62,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'BIDSit = BIDSit:DOit',
+            'BIDSit = BIDSit.go:DOit',
         ]
     }
 )
