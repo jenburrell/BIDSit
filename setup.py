@@ -40,7 +40,7 @@ setup(
     url='https://github.com/jenburrell/BIDSit',
     author='Jen Burrell',
     author_email='jenbur@psych.ubc.ca',
-    python_requires='>=3.10',
+    python_requires='>=3.9',
     
     package_dir={"":"src"},
     packages=find_namespace_packages(where='src'),
