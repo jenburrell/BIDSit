@@ -33,6 +33,9 @@ def DOit():
     # - define variables in use - #
     in_dir = user_info['in_dir'] # in_dir is where the input files are
     out_dir = user_info['out_dir'] # out_dir is where the output files will go
+    if 'rawdata' in out_dir:
+        out_dir = out_dir.rsplit('/rawdata')[0]
+        user_info['out_dir'] = out_dir
     WDIR = in_dir # WDIR is wherever we are working at the time
     user_info['WDIR'] = WDIR
     
@@ -835,6 +838,11 @@ def BIDSgo(sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, sca
                 file_list.append(file)
         if not file_list:
             file = ''
+        elif types:
+            if echo:
+                file = file_list[int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"])*i+(echo_num-1)]
+            else:
+                file = file_list[i]
         else:
             file = file_list[0]
     if not file: # if no files are found
@@ -857,6 +865,8 @@ def BIDSgo(sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, sca
         if types:
             numb = task_ord[:i+1].count(task_ord[i])
             run_num = numb
+            if echo_num == int(user_info[file_type][f"input_Task-{task_cat+1}-echo"]):
+                tasksLookedAt.append(task_cat) # add current occurance to task list
         else:
             occur = tasksLookedAt.count(task_cat) # counts occurance of task
             run_num = occur + 1 # run number based on how many times that task occured
@@ -1016,7 +1026,8 @@ def BIDSgo(sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, sca
                 
 # - organize all data and call function to find and rename files - #
 def BIDSit(sub, user_info, *types):
-    print(sub)
+    if not types:
+        print(sub)
     # - define variables in use - #
     WDIR = user_info['out_dir'] # file output (where the work is done)
     mkdir(WDIR, 'rawdata')
@@ -1142,17 +1153,12 @@ def BIDSit(sub, user_info, *types):
             tasksLookedAt=[]
         for i in range(scan_num):
             stop = False
-            if f"input_Task-{task_ord[i]+1}-echo" in user_info[file_type].keys() and int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"]) >1: # if multi-echo data
-                for echo in range(1, int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"])+1):
-                    tasksLookedAt, file_log, code = BIDSgo(og_sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, scans, task_ord, task_names, file_log, variables, echo)
-                    if code == 'Done':
-                        stop = True
-                        break
-            elif types: # if working for "intended for"
+            if types: # if working for "intended for"
                 i = types[1]
                 if f"input_Task-{task_ord[i]+1}-echo" in user_info[file_type].keys() and int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"]) >1: # if multi-echo data
                     for echo in range(1, int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"])+1):
                         tasksLookedAt, file_log, code = BIDSgo(og_sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, scans, task_ord, task_names, file_log, variables, echo, types)
+                        
                         if code == 'Done':
                             stop = True
                             break
@@ -1172,9 +1178,15 @@ def BIDSit(sub, user_info, *types):
                     with open(f"{WDIR}/BIDSit/Change_logs/{f_sub}/{file_type}_change_log.json", 'w') as file:
                         json.dump(file_log, file, indent=4)
                 if f"input_Task-{task_ord[i]+1}-echo" in user_info[file_type].keys() and int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"]) >1: # send back file names to .json edit
-                    return [file_log['changes'][f"scan {i+1} echo {echo_num} new"] for echo_num in range(1, int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"])+1)]
+                    return [[file_log['changes'][f"scan {i+1} echo {echo_num} new"] for echo_num in range(1, int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"])+1)], tasksLookedAt]
                 else:
                     return [[file_log['changes'][f"scan {i+1} new"]], tasksLookedAt]
+            elif f"input_Task-{task_ord[i]+1}-echo" in user_info[file_type].keys() and int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"]) >1: # if multi-echo data
+                for echo in range(1, int(user_info[file_type][f"input_Task-{task_ord[i]+1}-echo"])+1):
+                    tasksLookedAt, file_log, code = BIDSgo(og_sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, scans, task_ord, task_names, file_log, variables, echo)
+                    if code == 'Done':
+                        stop = True
+                        break
             else: # all other data
                 tasksLookedAt, file_log, code = BIDSgo(og_sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, scans, task_ord, task_names, file_log, variables)
             if stop:
@@ -1259,7 +1271,6 @@ def json_edit(json_f, file_type, f_sub, og_sub, info, *dicts):
                     file_t = item.split()[0] # file type to look at
                     t_num = int(item.split()[-1])-1 # scan to look at
                     if file_t in info:
-                        print(f"running BIDSit for on {file_t} {t_num} for {og_sub}")
                         these, tasksLookedAt = BIDSit(og_sub, info, file_t, t_num, tasksLookedAt)
                         that = []
                         for f in these:
@@ -1293,9 +1304,6 @@ def json_edit(json_f, file_type, f_sub, og_sub, info, *dicts):
                         elif data['PhaseEncodingDirection'] == "i":
                             dict_add = {'PhaseEncodingDirection': "i-"}
                         datum = {**datum, **dict_add}
-                        print("Changed PhaseEncodingDirection to: ", datum['PhaseEncodingDirection'] )
-                    else:
-                        print("Changed PhaseEncodingDirection to: ", datum['PhaseEncodingDirection'] )
                 with open(item, 'w') as this:
                     json.dump(datum, this, indent=4)
                     
