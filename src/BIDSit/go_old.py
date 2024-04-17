@@ -1,12 +1,10 @@
 #========================================================================#
 # Script Name: BIDSit.py                                                 #
 #                                                                        #
-# Version: 0.0.2                                                         #
-#                                                                        #
 # Description: This script converts user inputted data based on BIDS     #
 #              specifications                                            #
 #                                                                        #
-# Authors:     Jen Burrell & Justin Andrushko  (April 17th, 2023)        #
+# Authors:     Jen Burrell & Justin Andrushko  (March 28th, 2023)        #
 #========================================================================#
 #------------------------------------------------#
 #        Import script dependency packages       #
@@ -44,16 +42,15 @@ def DOit():
     ### --- convert files to NIFTIs --- ###
     if user_info['dcm2niix']:
         WDIR = out_dir
-        sub_folders = glob.glob(f"{in_dir}/*")
+        sub_folders = glob.glob(f"{in_dir}/*/")
         ses_folders = []
         for sub in sub_folders:
             if user_info['ses'] == "Yes":
-                ses_folders = ses_folders + list(glob.glob(f"{sub}/*"))
-                ses = True
+                ses_folders = ses_folders + list(glob.glob(f"{sub}/*/"))
+                ses = 'ses=True'
             else:
                 ses_folders = sub_folders
-                ses = False
-            
+                ses = 'ses=False'
         # - multiprocessing - #
         pool = Pool() # Create a multiprocessing Pool
         pool.starmap(dcm2niix, zip(ses_folders, repeat(WDIR), repeat(ses))) # process gets masks
@@ -82,7 +79,6 @@ def DOit():
         bids_info = BIDSit_gui(user_info) # get BIDS information from GUI
         user_info = {**user_info, **bids_info}
         sub_list = listdir(WDIR)
-        nonsubs = []
         for entry in sub_list:
             if user_info['ses'] =='Yes':
                 for file in listdir(os.path.join(WDIR,entry)):
@@ -95,10 +91,9 @@ def DOit():
                 if os.path.isdir(os.path.join(WDIR,entry)):
                     continue
                 else:
-                    nonsubs.append(entry)
+                    sub_list.remove(entry)
         for sub in natsorted(sub_list):
-            if not sub in nonsubs:
-                BIDSit(sub, user_info)
+            BIDSit(sub, user_info)
         # - multiprocessing - #
         ### not working with glob, wont find files ###
 #        pool = Pool(len(sub_list)) # Create a multiprocessing Pool
@@ -120,11 +115,7 @@ def DOit():
         def ignore_files(dir, files):
             return [f for f in files if os.path.isfile(os.path.join(dir, f))]
         if dir_exists(der_dir):
-            dir_all = listdir(WDIR+'/rawdata')
-            dir=[]
-            for thing in dir_all:
-                if os.path.isdir(os.path.join(WDIR+'/rawdata/',thing)):
-                     dir.append(thing)
+            dir = listdir(WDIR+'/rawdata')
             der_fld = listdir(der_dir)
             for sub in dir:
                 if sub in der_fld:
@@ -157,27 +148,22 @@ def DOit():
         if not os.path.exists(WDIR + '/rawdata' + '/README.md'):
             # Create a new README file in BIDS format
             with open(WDIR + '/rawdata' + '/README.md', 'w') as f:
-                f.write('# ' + os.path.basename(WDIR) + f"\t{user_info['exp_name']}\n\nThis is a project in BIDS format.\n\n## Introduction\n\n## Data\n\n## Code\n\n## Results\n\n## Conclusion\n\n## References\n\n")
+                f.write('# ' + os.path.basename(WDIR) + 'My Project\n\nThis is a project in BIDS format.\n\n## Introduction\n\n## Data\n\n## Code\n\n## Results\n\n## Conclusion\n\n## References\n\n')
                 print('README.md file created successfully!')
         else:
             print('README.md file already exists.')
 
         # - participants.tsv file - #
-        if not os.path.exists(WDIR + '/rawdata/participants.tsv'):
+        if not os.path.exists(WDIR + '/rawdata' + '/participants.tsv'):
             # Create a new participants.tsv file in BIDS format
-            with open(WDIR + '/rawdata/participants.tsv', 'w') as f:
+            with open(WDIR + '/rawdata' + '/participants.tsv', 'w') as f:
                 f.write('participant_id\tage\tsex\n')
                 for sub in natsorted(sub_list):
                     sub = sub.split('/')[0]
-                    f.write(f"\n{sub}\t \t")
+                    f.write(f"{sub}\t \t \n")
                 print('participants.tsv file created successfully!')
-        elif os.path.exists(WDIR + '/rawdata/participants.tsv'):
-            # Add new participants to file in BIDS format
-            with open(WDIR + '/rawdata/participants.tsv', 'a+') as f:
-                for sub in natsorted(sub_list):
-                    sub = sub.split('/')[0]
-                    f.write(f"\n{sub}\t \t")
-                print('participants.tsv file editted successfully!')
+        else:
+            print('participants.tsv file already exists.')
 
         # - participants.json file - #
         if not os.path.exists(WDIR + '/rawdata' + '/participants.json'):
@@ -201,13 +187,12 @@ def DOit():
                 print('participants.json file created successfully!')
         else:
             print('participants.json file already exists.')
-        print('\nYour data should be BIDS-ified :)')
-    else: # when not doing BIDSit, rename tempdata to sourcedata
+    else: # when not doing BIDSit, rename tempdata to sourcedata and delete tempdata
         WDIR = WDIR.rsplit('/',1)[0]
         dir = listdir(WDIR)
         for fld in dir:
             if 'tempdata' in fld:
-                os.rename(WDIR+'/'+fld, WDIR+'/sourcedata')
+                shutil.rmtree(WDIR+'/'+fld)
     return
     
 #------------------#
@@ -291,7 +276,8 @@ def start_gui():
                 mkdir(info['out_dir'])
             info['dcm2niix'] = values['-dcm2niix-']
             info['bids_it'] = values['-bids_it-']
-            info['copy'] = sg.popup_yes_no(f"Do you want to copy your NIFTI files to a 'sourcedata' folder in {info['out_dir']}")
+            if info['bids_it']:
+                info['copy'] = sg.popup_yes_no(f"Do you want to copy your NIFTI files to a 'sourcedata' folder in {info['out_dir']}")
             info['func'] = values['-func-']
             info['anat'] = values['-anat-']
             info['dwi'] = values['-dwi-']
@@ -500,7 +486,7 @@ def func_butt(task_num, scan_num, echo):
             if echo == 'Yes':
                 for num in range(1, int(task_num)+1):
                     if not values[f"input_Task-{num}-echo"] or int(values[f"input_Task-{num}-echo"]) < 1:
-                        values[f"input_Task-{num}-echo"] = sg.popup_get_text(f"Number of echos for Task {num} must be >= 1 \nPlease enter number of echos for Task {num}", title="Oops")
+                        values[f"input_Task-{num}-echo"] = sg.popup_get_text(f"Number of echos for Task {num} must be >= 1 n\Please enter number of echos for Task {num}", title="Oops")
             info = values
             window_2.close()
     return info
@@ -752,13 +738,12 @@ def BIDSgo(sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, sca
             sub = 'sub-'+''.join(num)
         sub_solo = sub # subject variable that only has sub information
         f_sub = sub # file naming subject variable
-
+            
     task_num = int(user_info[f"{file_type}_task_num"])
     scan_num = int(user_info[f"{file_type}_scan_num"])
     
     
     if echo and isinstance(echo[0], int): # check to see if it is an intended for file or an echo file or both
-        ME = True # flag for Multi echo data
         echo_num = echo[0]
         if len(echo) > 1:
             types = echo[1]
@@ -769,7 +754,6 @@ def BIDSgo(sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, sca
         echo_num = 1
         echo = {}
     else:
-        ME = False
         types = echo
         echo_num = 1
         echo = {}
@@ -795,27 +779,17 @@ def BIDSgo(sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, sca
                 file_list.append('_'.join(file.rsplit('_',2)[-2:]).split('.')[0])
             else:
                 file_list.append(file.rsplit('_',1)[-1].split('.')[0])
-        
-        file_list = natsorted(file_list) # sort acq numbers in numeric order
+                
+        file_list = natsorted(file_list)
         files_full = files
         files = []
-        j_fi=0
-        i_fi=0
-        for file_num in file_list:
+        for file in file_list:
             flag = False
-            for f in files_full[j_fi:]:
-                if ME:
-                    if file_num in '_'.join(f.rsplit('_',2)[-2:]): # match acq number to file path for ME data
-                        j_fi=i_fi
-                        files.append(f)
-                        flag = True
-                        break
-                else:
-                    if file_num in f.rsplit('_',1)[-1]: # match acq number to file path
-                        j_fi=i_fi
-                        files.append(f)
-                        flag = True
-                        break
+            for f in files_full:
+                if file in f:
+                    files.append(f)
+                    flag = True
+                    break
             if flag == True:
                 continue
     if not files:
@@ -954,7 +928,7 @@ def BIDSgo(sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, sca
                 os.rename(json_file, json_new) # rename file
             json_edit(json_new, file_type, f_sub, og_sub, user_info) # edit json files to include necessary information
         elif not types:
-            with open(json_new, 'r') as file: # Error on Brandons
+            with open(json_new, 'r') as file:
                 data = json.load(file)
             if 'PhaseEncodingDirection' in data.keys():
                 PhaseEncodingDirection = data['PhaseEncodingDirection']
@@ -1037,11 +1011,7 @@ def BIDSgo(sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, sca
                 if buf and not types:
                     with open(new, 'r') as this:
                         data = json.load(this)
-                    for value in data.keys():
-                        if 'PhaseEncodingDirection' in value:
-                            PhaseEncodingDirection = data[value]
-                        elif 'PhaseEncodingAxis' == value:
-                            PhaseEncodingDirection = data[value]
+                    PhaseEncodingDirection = data['PhaseEncodingDirection']
                     os.rename(file, new) # rename file
                     json_edit(new, file_type, f_sub, og_sub, user_info) # edit json files to include necessary information
                     with open(new, 'r') as this:
@@ -1057,7 +1027,7 @@ def BIDSgo(sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, sca
 # - organize all data and call function to find and rename files - #
 def BIDSit(sub, user_info, *types):
     if not types:
-        print(f"\n{sub}")
+        print(sub)
     # - define variables in use - #
     WDIR = user_info['out_dir'] # file output (where the work is done)
     mkdir(WDIR, 'rawdata')
@@ -1219,8 +1189,6 @@ def BIDSit(sub, user_info, *types):
                         break
             else: # all other data
                 tasksLookedAt, file_log, code = BIDSgo(og_sub, i, user_info, file_type, tasksLookedAt, exts, endings, menu, scans, task_ord, task_names, file_log, variables)
-                if code == 'Done':
-                    stop = True
             if stop:
                 break
         if dir_exists(f"{WDIR}/BIDSit/Change_logs/{f_sub}"): # add to change_log file
@@ -1241,10 +1209,8 @@ def json_edit(json_f, file_type, f_sub, og_sub, info, *dicts):
     dic = {}
     for dict in dicts:
         dic = {**dic, **dict}
-    with open(json_f, 'r', encoding='utf-8') as file: # removed encoding='utf-8' to get it to work with Brandons data
+    with open(json_f, 'r') as file:
         data = json.load(file)
-#        file_string = file.read()
-#        data = json.loads(file_string, object_hook=ascii_encode_dict)
         for value in data.keys():
             if 'WaterFatShift' in value:
                 WaterFatShift = data[value]
@@ -1259,8 +1225,6 @@ def json_edit(json_f, file_type, f_sub, og_sub, info, *dicts):
             elif 'EstimatedTotalReadoutTime' in value:
                 EstimatedTotalReadoutTime = data[value]
             elif 'PhaseEncodingDirection' == value:
-                PhaseEncodingDirection = data[value]
-            elif 'PhaseEncodingAxis' == value:
                 PhaseEncodingDirection = data[value]
         try :
             WaterFatShift
@@ -1393,6 +1357,6 @@ def copy_it(src, dst):
         if exc.errno in (errno.ENOTDIR, errno.EINVAL):
             shutil.copy(src, dst)
         else: raise
-        
+    
 if __name__ == '__main__':
     DOit()
