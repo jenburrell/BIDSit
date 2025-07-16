@@ -3,7 +3,7 @@
 #                                                                            #
 # Description: specifies version for BIDSit                                  #
 #                                                                            #
-# Author:      Jen Burrell (April 17th, 2023)                                #
+# Author:      Jen Burrell (July 16th, 2025)                                 #
 #============================================================================#
 
-__version__ = '0.0.2'
+__version__ = '0.2.0'

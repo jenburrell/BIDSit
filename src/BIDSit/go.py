@@ -1,10 +1,13 @@
 #========================================================================#
 # Script Name: BIDSit.py                                                 #
 #                                                                        #
-# Version: 0.0.2                                                         #
+# Version: 0.2.0                                                         #
 #                                                                        #
 # Description: This script converts user inputted data based on BIDS     #
 #              specifications                                            #
+#              Version 0.2.0 update: replaced PySimpleGUI with           #
+#              FreeSimpleGUI to avoid the closing of the previously open #
+#              source program                                            #
 #                                                                        #
 # Authors:     Jen Burrell & Justin Andrushko  (April 17th, 2023)        #
 #========================================================================#
@@ -15,7 +18,7 @@ import subprocess
 import os
 import sys
 import re
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from datetime import datetime
 from multiprocessing import Pool
 from itertools import repeat

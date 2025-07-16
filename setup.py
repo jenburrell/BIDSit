@@ -52,7 +52,7 @@ setup(
     ],
     
     install_requires=[
-        'PySimpleGUI>=4.60.4',
+        'FreeSimpleGUI>=5.2.0',
         'natsort>=8.3.1',
     ],
     extras_require={
